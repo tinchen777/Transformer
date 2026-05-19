@@ -1,0 +1,31 @@
+# -*- coding: utf-8 -*-
+# Python version: 3.10
+from __future__ import annotations
+import torch
+from torch import nn
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from ..types import Tensor
+
+
+# class LayerNorm(nn.Module):
+#     def __init__(self, d_model: int, eps=1e-12):
+#         super().__init__()
+#         self.gamma = nn.Parameter(torch.ones(d_model))
+#         self.beta = nn.Parameter(torch.zeros(d_model))
+#         self.eps = eps
+
+#     def forward(self, x: Tensor) -> Tensor:
+#         mean = x.mean(-1, keepdim=True)
+#         var = x.var(-1, unbiased=False, keepdim=True)
+#         # '-1' means last dimension. 
+
+#         out = (x - mean) / torch.sqrt(var + self.eps)
+#         out = self.gamma * out + self.beta
+#         return out
+
+
+class LayerNorm(nn.LayerNorm):
+    def __init__(self, d_model: int, eps=1e-12):
+        super().__init__(d_model, eps=eps)
