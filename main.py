@@ -7,8 +7,8 @@ import torch.utils.data as Data
 from transformer import Transformer
 
 
-#device = 'cpu'
-device = 'cuda'
+device = 'cpu'
+# device = 'cuda'
 
 # transformer epochs
 epochs = 100
@@ -109,9 +109,22 @@ loader = Data.DataLoader(
     MyDataSet(enc_inputs, dec_inputs, dec_outputs), 2, True)
 
 
+model = Transformer(
+    src_pad_idx=src_vocab["P"],
+    trg_pad_idx=tgt_vocab["P"],
+    trg_sos_idx=tgt_vocab["S"],
+    enc_vocab_size=src_vocab_size,
+    dec_vocab_size=tgt_vocab_size,
+    enc_n_layers=n_layers,
+    dec_n_layers=n_layers,
+    d_model=d_model,
+    n_heads=n_heads,
+    max_len=5000,
+    d_ff=d_ff,
+    drop_prob=0.1,
+    device=device
+).to(device)
 
-
-model = Transformer().to(device)
 # 这里的损失函数里面设置了一个参数 ignore_index=0，因为 "pad" 这个单词的索引为 0，这样设置以后，就不会计算 "pad" 的损失（因为本来 "pad" 也没有意义，不需要计算）
 criterion = nn.CrossEntropyLoss(ignore_index=0)
 optimizer = optim.SGD(model.parameters(), lr=1e-3,
@@ -128,8 +141,7 @@ for epoch in range(epochs):
         enc_inputs, dec_inputs, dec_outputs = enc_inputs.to(
             device), dec_inputs.to(device), dec_outputs.to(device)
         # outputs: [batch_size * tgt_len, tgt_vocab_size]
-        outputs, enc_self_attns, dec_self_attns, dec_enc_attns = model(
-            enc_inputs, dec_inputs)
+        outputs = model(enc_inputs, dec_inputs)
         # dec_outputs.view(-1):[batch_size * tgt_len * tgt_vocab_size]
         loss = criterion(outputs, dec_outputs.view(-1))
         print('Epoch:', '%04d' % (epoch + 1), 'loss =', '{:.6f}'.format(loss))
@@ -149,7 +161,7 @@ def greedy_decoder(model, enc_input, start_symbol):
     :param start_symbol: The start symbol. In this example it is 'S' which corresponds to index 4
     :return: The target input
     """
-    enc_outputs, enc_self_attns = model.encoder(enc_input)
+    enc_outputs = model.encoder(enc_input)
     # 初始化一个空的tensor: tensor([], size=(1, 0), dtype=torch.int64)
     dec_input = torch.zeros(1, 0).type_as(enc_input.data)
     terminal = False
@@ -158,9 +170,8 @@ def greedy_decoder(model, enc_input, start_symbol):
         # 预测阶段：dec_input序列会一点点变长（每次添加一个新预测出来的单词）
         dec_input = torch.cat([dec_input.to(device), torch.tensor([[next_symbol]], dtype=enc_input.dtype).to(device)],
                               -1)
-        dec_outputs, _, _ = model.decoder(dec_input, enc_input, enc_outputs)
-        projected = model.projection(dec_outputs)
-        prob = projected.squeeze(0).max(dim=-1, keepdim=False)[1]
+        dec_outputs = model.decoder(dec_input, enc_input, enc_outputs)
+        prob = dec_outputs.squeeze(0).max(dim=-1, keepdim=False)[1]
         # 增量更新（我们希望重复单词预测结果是一样的）
         # 我们在预测是会选择性忽略重复的预测的词，只摘取最新预测的单词拼接到输入序列中
         # 拿出当前预测的单词(数字)。我们用x'_t对应的输出z_t去预测下一个单词的概率，不用z_1,z_2..z_{t-1}

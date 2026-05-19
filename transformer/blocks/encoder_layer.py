@@ -11,7 +11,13 @@ if TYPE_CHECKING:
 
 
 class EncoderLayer(nn.Module):
-    def __init__(self, d_model: int, d_ff: int, n_heads: int, drop_prob: float = 0.1):
+    def __init__(
+        self,
+        d_model: int = 512,
+        d_ff: int = 2048,
+        n_heads: int = 8,
+        drop_prob: float = 0.1
+    ):
         super().__init__()
 
         self.mha = MultiHeadAttention(d_model=d_model, n_heads=n_heads)
@@ -25,7 +31,7 @@ class EncoderLayer(nn.Module):
     def forward(self, enc_inputs: Tensor, src_mask: Tensor) -> tuple[Tensor, Tensor]:
         # 1. compute multi head attention
         res = enc_inputs
-        x, attn = self.mha(input_Q=enc_inputs, input_K=enc_inputs, input_V=enc_inputs, attn_mask=src_mask)
+        x, mha_attn = self.mha(input_Q=enc_inputs, input_K=enc_inputs, input_V=enc_inputs, attn_mask=src_mask)
         # add and norm
         x = self.mha_dropout(x)
         x = self.mha_norm(x + res)
@@ -37,4 +43,4 @@ class EncoderLayer(nn.Module):
         x = self.ff_dropout(x)
         enc_outputs = self.ff_norm(x + res)
 
-        return enc_outputs, attn
+        return enc_outputs, mha_attn
