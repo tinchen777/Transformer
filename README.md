@@ -1,1 +1,1 @@
-# vanilla-Transformer
+# Vanilla Transformer
