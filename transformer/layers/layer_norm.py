@@ -6,7 +6,7 @@ from torch import nn
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ..types import Tensor
+    Tensor = torch.Tensor
 
 
 # class LayerNorm(nn.Module):

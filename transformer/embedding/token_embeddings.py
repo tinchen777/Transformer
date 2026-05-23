@@ -5,14 +5,7 @@ from torch import nn
 
 class TokenEmbedding(nn.Embedding):
     """
-    Token Embedding using torch.nn
-    they will dense representation of word using weighted matrix
+    Token embedding layer.
     """
-    def __init__(self, vocab_size: int, d_model: int):
-        """
-        class for token embedding that included positional information
-
-        :param vocab_size: size of vocabulary
-        :param d_model: dimensions of model
-        """
-        super().__init__(vocab_size, d_model, padding_idx=1)
+    def __init__(self, vocab_size: int, d_model: int, padding_idx: int = 0):
+        super().__init__(vocab_size, d_model, padding_idx=padding_idx)

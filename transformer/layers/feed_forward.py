@@ -8,12 +8,14 @@ class PositionwiseFeedForward(nn.Module):
         super().__init__()
         self.linear1 = nn.Linear(d_model, d_ff, bias=False)
         self.linear2 = nn.Linear(d_ff, d_model, bias=False)
-        self.relu = nn.ReLU()
+        # self.relu = nn.ReLU()
+        self.act = nn.GELU()
         self.dropout = nn.Dropout(p=drop_prob)
 
     def forward(self, x):
         x = self.linear1(x)
-        x = self.relu(x)
+        # x = self.relu(x)
+        x = self.act(x)
         x = self.dropout(x)
         x = self.linear2(x)
         return x

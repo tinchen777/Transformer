@@ -2,45 +2,77 @@
 # Python version: 3.10
 from __future__ import annotations
 from torch import nn
-from typing import TYPE_CHECKING
+from typing import (Tuple, TYPE_CHECKING)
 
-from ..layers import (MultiHeadAttention, PositionwiseFeedForward, LayerNorm)
+from .._utils import ModuleConfig
+from ..layers import (
+    make_mha_layers,
+    make_ff_layers
+)
+from ..exceptions import EncoderError
 
 if TYPE_CHECKING:
-    from ..types import Tensor
+    import torch
+    Tensor = torch.Tensor
 
 
 class EncoderLayer(nn.Module):
-    def __init__(
-        self,
-        d_model: int = 512,
-        d_ff: int = 2048,
-        n_heads: int = 8,
-        drop_prob: float = 0.1
-    ):
+    """
+    Encoder layer.
+    """
+    def __init__(self, config: ModuleConfig):
         super().__init__()
 
-        self.mha = MultiHeadAttention(d_model=d_model, n_heads=n_heads)
-        self.mha_norm = LayerNorm(d_model)
-        self.mha_dropout = nn.Dropout(p=drop_prob)
+        # multi head attention
+        self.mha, self.mha_norm, self.mha_dropout = make_mha_layers(config)
+        # positionwise feed forward network
+        self.ff, self.ff_norm, self.ff_dropout = make_ff_layers(config)
 
-        self.ff = PositionwiseFeedForward(d_model=d_model, d_ff=d_ff, drop_prob=drop_prob)
-        self.ff_norm = LayerNorm(d_model)
-        self.ff_dropout = nn.Dropout(p=drop_prob)
+    def forward(
+        self,
+        enc_inputs: Tensor,
+        src_mask: Tensor
+    ) -> Tuple[Tensor, Tensor]:
+        """
+        Compute the forward pass of the encoder layer.
 
-    def forward(self, enc_inputs: Tensor, src_mask: Tensor) -> tuple[Tensor, Tensor]:
-        # 1. compute multi head attention
-        res = enc_inputs
-        x, mha_attn = self.mha(input_Q=enc_inputs, input_K=enc_inputs, input_V=enc_inputs, attn_mask=src_mask)
-        # add and norm
-        x = self.mha_dropout(x)
-        x = self.mha_norm(x + res)
+        Parameters
+        ----------
+            enc_inputs : Tensor
+                Input tensor to the encoder layer, shape as `[bsz, len_src, d_model]`.
 
-        # 2. positionwise feed forward network
-        res = x
-        x = self.ff(x)
-        # add and norm
-        x = self.ff_dropout(x)
-        enc_outputs = self.ff_norm(x + res)
+            src_mask : Tensor
+                Source mask, shape as `[bsz, 1, 1, len_src]`.
 
-        return enc_outputs, mha_attn
+        Returns
+        -------
+            Tensor
+                Output tensor from the encoder layer, shape as `[bsz, len_src, d_model]`.
+            Tensor
+                Attention weights from the multi-head attention, shape as `[bsz, n_heads, len_src, len_src]`.
+        """
+        try:
+            # 1. compute multi head attention
+            res = enc_inputs
+            x, mha_attn = self.mha(
+                Q_inputs=enc_inputs,
+                K_inputs=enc_inputs,
+                V_inputs=enc_inputs,
+                attn_mask=src_mask
+            )
+            # add and norm
+            x = self.mha_dropout(x)
+            x = self.mha_norm(x + res)
+
+            # 2. positionwise feed forward
+            res = x
+            x = self.ff(x)
+            # add and norm
+            x = self.ff_dropout(x)
+            enc_outputs = self.ff_norm(x + res)
+
+            return enc_outputs, mha_attn
+
+        except Exception as e:
+            raise EncoderError(
+                "Encoder layer error") from e
