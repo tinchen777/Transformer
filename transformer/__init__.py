@@ -1,7 +1,7 @@
 
 from .models import (Transformer, DecoderOnlyTransformer)
 from .modules import (Encoder, Decoder, DecoderOnly)
-from ._utils import ModuleConfig
+from ._utils import (ModuleConfig, select_next_token)
 
 __all__ = [
     'Transformer',
@@ -9,5 +9,6 @@ __all__ = [
     'Encoder',
     'Decoder',
     'DecoderOnly',
-    'ModuleConfig'
+    'ModuleConfig',
+    'select_next_token'
 ]

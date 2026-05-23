@@ -2,8 +2,9 @@
 # Python version: 3.10
 from __future__ import annotations
 import torch
+import torch.nn.functional as F
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import (Optional, Literal, TYPE_CHECKING)
 
 if TYPE_CHECKING:
     Tensor = torch.Tensor
@@ -95,3 +96,91 @@ def make_merged_mask(seq: Tensor, pad_idx: int = 0) -> Tensor:
     # mask: [bsz, 1, len_seq, len_seq]
 
     return mask
+
+
+def select_next_token(
+    logits: Tensor,
+    strategy: Literal["greedy", "sample"] = "greedy",
+    temperature: float = 1.0,
+    top_k: Optional[int] = None,
+    top_p: Optional[float] = None,
+) -> Tensor:
+    """
+    Select the next token for each sample in a batch from a logits distribution.
+
+    Parameters
+    ----------
+        logits: Tensor
+            Raw logits from the last decoder step, shape `[bsz, vocab_size]`.
+
+        strategy : Literal["greedy", "sample"]
+            The decoding strategy to use.
+            - `"greedy"`: always pick the highest-probability token.
+            - `"sample"`: draw from the distribution (supports temperature, top-k, and top-p filtering).
+
+        temperature : float, default `1.0`
+            :param:`strategy` is `"sample"` ONLY. Scaling factor applied before softmax.
+            - `< 1`: Sharpen the distribution;
+            - `> 1`: Flatten it.
+            Approaches greedy as temperature → 0.
+
+        top_k : Optional[int], default `None`
+            :param:`strategy` is `"sample"` ONLY.
+            - _int_: Restrict sampling to the top-k tokens by logit value. Must be > 0.
+
+        top_p : Optional[float], default `None`
+            :param:`strategy` is `"sample"` ONLY.
+            - _float_: Restrict sampling to the top-p tokens by cumulative probability. Must be in (0, 1).
+
+    Returns
+    -------
+        Tensor
+            The selected tokens, shape as `[bsz, 1]`.
+    """
+    if logits.dim() != 2:
+        raise ValueError(
+            f"Expected logits of shape [bsz, vocab_size], got {logits.shape}"
+        )
+
+    # ------------------------------------------------------------------
+    # Greedy: return the highest-logit token for every sample
+    # ------------------------------------------------------------------
+    if strategy == "greedy":
+        return logits.argmax(dim=-1, keepdim=True)  # [bsz, 1]
+
+    # ------------------------------------------------------------------
+    # Sample: optionally filter logits, then draw from the distribution
+    # ------------------------------------------------------------------
+    if strategy == "sample":
+        # Temperature scaling — squash or flatten the distribution
+        logits = logits / max(temperature, 1e-8)
+
+        # Top-k filtering — zero out every token outside the top k
+        if top_k is not None and top_k > 0:
+            k = min(top_k, logits.size(-1))  # guard against k > vocab
+            topk_vals, _ = torch.topk(logits, k, dim=-1)  # [bsz, k]
+            threshold = topk_vals[:, [-1]]  # [bsz, 1] — k-th largest value
+            logits = logits.masked_fill(logits < threshold, -float("inf"))
+
+        # Top-p (nucleus) filtering — zero out the low-probability tail
+        if top_p is not None and 0 < top_p < 1.0:
+            sorted_logits, sorted_idx = torch.sort(logits, descending=True, dim=-1)
+            cum_probs = torch.cumsum(F.softmax(sorted_logits, dim=-1), dim=-1)
+
+            # Mark tokens whose cumulative probability already exceeds top_p
+            remove_mask = cum_probs > top_p
+            # Shift right by one so the token that *pushes* cumprob over top_p is kept
+            remove_mask[..., 1:] = remove_mask[..., :-1].clone()
+            remove_mask[..., 0] = False                         # always keep the top token
+
+            sorted_logits = sorted_logits.masked_fill(remove_mask, -float("inf"))
+            # Scatter back to the original vocab ordering
+            logits = torch.full_like(logits, -float("inf")).scatter(
+                -1, sorted_idx, sorted_logits
+            )
+
+        probs = F.softmax(logits, dim=-1)
+        return torch.multinomial(probs, num_samples=1)          # [bsz, 1]
+
+    raise ValueError(
+        f"Invalid strategy for `select_next_token`: {strategy}. Must be 'greedy' or 'sample'.")

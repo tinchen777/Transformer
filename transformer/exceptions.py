@@ -18,5 +18,10 @@ class MultiHeadAttentionError(TransformerError):
 class ScaledDotProductAttentionError(MultiHeadAttentionError):
     """Exception raised for errors in the scaled dot-product attention."""
 
+
 class EmbeddingError(TransformerError):
     """Exception raised for errors in the embedding layer."""
+
+
+class GenerationError(TransformerError):
+    """Exception raised for errors during generation."""
