@@ -213,10 +213,8 @@ class DecoderOnly(BaseModule):
                 f"Error in embedding layer of decoder") from e
 
         self.masked_mha_attns: List[Tensor] = []
-        self.mha_attns: List[Tensor] = []
         for dec_layer in self.dec_layers:
-            x, masked_mha_attn, mha_attn = dec_layer(x, trg_mask=trg_mask)
+            x, masked_mha_attn = dec_layer(x, trg_mask=trg_mask)
             self.masked_mha_attns.append(masked_mha_attn)
-            self.mha_attns.append(mha_attn)
 
         return x
