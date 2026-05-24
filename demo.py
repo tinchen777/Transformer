@@ -7,12 +7,12 @@ import torch.utils.data as Data
 from transformer import Transformer, ModuleConfig
 
 
-device = 'cpu'
+# device = 'cpu'
 # device = 'cuda'
+device = 'mps'  # macbook的GPU
 
 # transformer epochs
 epochs = 100
-# epochs = 1000
 
 ######
 # DATA
