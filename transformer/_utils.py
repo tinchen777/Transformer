@@ -48,7 +48,7 @@ def make_pad_mask(seq: Tensor, pad_idx: int = 0) -> Tensor:
     """
     return (seq == pad_idx).unsqueeze(1).unsqueeze(2)
 
-
+# Full Causal
 def make_causal_mask(seq: Tensor) -> Tensor:
     """
     Make causal mask for decoder.
@@ -69,6 +69,15 @@ def make_causal_mask(seq: Tensor) -> Tensor:
         torch.ones(len_seq, len_seq, device=seq.device, dtype=torch.bool),
         diagonal=1
     )
+    
+    
+# Prefix LM
+def build_mask(seq_len, prefix_len, device):
+    """prefix_len: Q 部分的长度,这部分对内部完全可见"""
+    mask = torch.tril(torch.ones(seq_len, seq_len, dtype=torch.bool, device=device))
+    # 把 Q 内部的上三角也设为 True (双向)
+    mask[:prefix_len, :prefix_len] = True
+    return mask
 
 
 def make_merged_mask(seq: Tensor, pad_idx: int = 0) -> Tensor:

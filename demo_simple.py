@@ -2,6 +2,7 @@
 import torch
 import torch.nn as nn
 import torch.optim as optim
+from torch.utils.data import DataLoader
 
 from data.simple import *
 from transformer import Transformer, ModuleConfig
@@ -13,6 +14,15 @@ device = 'mps'  # macbook的GPU
 
 # transformer epochs
 epochs = 100
+
+######
+# DATA
+######
+loader = DataLoader(
+    tokenized_datasets,
+    batch_size=2,
+    shuffle=True
+)
 
 #######
 # MODEL
@@ -30,14 +40,15 @@ model = Transformer(
     )
 ).to(device)
 
-# 这里的损失函数里面设置了一个参数 ignore_index=0，因为 "pad" 这个单词的索引为 0，这样设置以后，就不会计算 "pad" 的损失（因为本来 "pad" 也没有意义，不需要计算）
-criterion = nn.CrossEntropyLoss(ignore_index=tgt_vocab['P'])
-optimizer = optim.SGD(model.parameters(), lr=1e-3, momentum=0.99)  # 用adam的话效果不好
 
 # =======================================================
-print("开始训练Transformer模型...")
-
 def train(model: Transformer):
+    print("开始训练Transformer模型...")
+
+    # 这里的损失函数里面设置了一个参数 ignore_index=0，因为 "pad" 这个单词的索引为 0，这样设置以后，就不会计算 "pad" 的损失（因为本来 "pad" 也没有意义，不需要计算）
+    criterion = nn.CrossEntropyLoss(ignore_index=tgt_vocab['P'])
+    optimizer = optim.SGD(model.parameters(), lr=1e-3, momentum=0.99)  # 用adam的话效果不好
+
     model.train()
 
     for epoch in range(epochs):
@@ -61,19 +72,16 @@ def train(model: Transformer):
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
+    print("训练完成！")
+
     return model
 
 model = train(model)
-
-print("训练完成！")
-
 print(model)
 
 
 # =======================================================
-
 print("开始测试Transformer模型...")
-
 def generate(model: Transformer, prompt: str = '我 有 一 个 男 朋 友'):
     enc_input = torch.LongTensor([src_vocab[n] for n in prompt.split()]).to(device)
 

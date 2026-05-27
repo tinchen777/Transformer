@@ -62,13 +62,12 @@ class MyDataSet(Data.Dataset):
         return self.enc_inputs[idx], self.dec_inputs[idx], self.dec_outputs[idx]
 
 
-loader = Data.DataLoader(
-    MyDataSet(enc_inputs, dec_inputs, dec_outputs), 2, True)
+tokenized_datasets = MyDataSet(enc_inputs, dec_inputs, dec_outputs)
 
 
 if __name__ == "__main__":
-    for enc_input, dec_input, dec_output in loader:
-        print("enc_input:", enc_input)
-        print("dec_input:", dec_input)
-        print("dec_output:", dec_output)
+    for enc_inputs, dec_inputs, dec_outputs in tokenized_datasets:
+        print("enc_inputs:", enc_inputs)
+        print("dec_inputs:", dec_inputs)
+        print("dec_outputs:", dec_outputs)
         break
