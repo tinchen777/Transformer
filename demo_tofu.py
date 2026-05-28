@@ -3,6 +3,8 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
+import os
+from datetime import datetime
 
 from data.tofu import *
 from transformer import DecoderOnlyTransformer, ModuleConfig
@@ -25,6 +27,8 @@ EPOCHS = 200
 LR = 3e-4
 GRAD_CLIP = 1.0
 LOG_EVERY = 2
+
+TAG = datetime.now().strftime("%Y%m%d_%H%M")
 
 ######
 # DATA
@@ -99,7 +103,10 @@ def train(model: DecoderOnlyTransformer):
 
             # logits = model(dec_inputs, dec_attention_mask)  # [bsz, T-1, vocab_size]
             # loss = criterion(logits.view(-1, VOCAB_SIZE), dec_outputs.view(-1))
-        torch.save(model.state_dict(), f"save/tofu_model_full_{epoch}.pth")
+        # path
+        os.makedirs(f"save/{TAG}", exist_ok=True)
+
+        torch.save(model.state_dict(), f"save/{TAG}/tofu_model_full_{epoch}.pth")
     return model
 
 # for batch in loader:
@@ -127,7 +134,7 @@ def train(model: DecoderOnlyTransformer):
 
 model = train(model)
 
-torch.save(model.state_dict(), "save/tofu_model_full.pth")
+torch.save(model.state_dict(), f"save/{TAG}/tofu_model_full.pth")
 
 # class MyDecoder(nn.Module):
 #     def __init__(self, V, D):
