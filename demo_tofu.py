@@ -21,7 +21,7 @@ DROP_PROB = 0.1
 
 # Training hyperparameters
 BATCH_SIZE = 16
-EPOCHS = 20
+EPOCHS = 200
 LR = 3e-4
 GRAD_CLIP = 1.0
 LOG_EVERY = 2
@@ -70,7 +70,7 @@ def train(model: DecoderOnlyTransformer):
     for epoch in range(1, EPOCHS + 1):
         running = 0.0
 
-        for batch in loader:
+        for i, batch in enumerate(loader):
             input_ids = batch["input_ids"].to(DEVICE)          # [bsz, T]
             attention_mask = batch["attention_mask"].to(DEVICE) # [bsz, T]
             labels = batch["labels"].to(DEVICE)                # [bsz, T], Q 段和 pad 段是 -100
@@ -90,7 +90,7 @@ def train(model: DecoderOnlyTransformer):
             optimizer.step()
             optimizer.zero_grad()
             
-            print('Epoch:', '%04d' % (epoch + 1), 'loss =', '{:.6f}'.format(loss))
+            print('Epoch:', '%04d' % (epoch), 'Iter:', '%04d' % (i), 'loss =', '{:.6f}'.format(loss))
 
             # # Decoder-Only 模型的输入和输出都是 input_ids, 但训练时要错开一格
             # dec_inputs = input_ids[:, :-1]       # [bsz, T-1], 包含 sos, 不包含 eos
@@ -99,6 +99,8 @@ def train(model: DecoderOnlyTransformer):
 
             # logits = model(dec_inputs, dec_attention_mask)  # [bsz, T-1, vocab_size]
             # loss = criterion(logits.view(-1, VOCAB_SIZE), dec_outputs.view(-1))
+        torch.save(model.state_dict(), f"save/tofu_model_full_{epoch}.pth")
+    return model
 
 # for batch in loader:
 #     input_ids      = batch["input_ids"]       # [bsz, L]
@@ -125,7 +127,7 @@ def train(model: DecoderOnlyTransformer):
 
 model = train(model)
 
-
+torch.save(model.state_dict(), "save/tofu_model_full.pth")
 
 # class MyDecoder(nn.Module):
 #     def __init__(self, V, D):
