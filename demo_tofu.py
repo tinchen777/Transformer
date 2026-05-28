@@ -11,8 +11,8 @@ from transformer import DecoderOnlyTransformer, ModuleConfig
 
 
 # DEVICE = 'cpu'
-# DEVICE = 'cuda'
-DEVICE = 'mps'  # macbook的GPU
+DEVICE = 'cuda:1'
+# DEVICE = 'mps'  # macbook的GPU
 
 # Model hyperparameters
 D_MODEL = 512
@@ -50,7 +50,7 @@ model = DecoderOnlyTransformer(
     vocab_size=VOCAB_SIZE,
     config=ModuleConfig(
         pad_idx=PAD_ID,
-        sos_idx=BOS_ID,
+        bos_idx=BOS_ID,
         eos_idx=EOS_ID,
         d_model=D_MODEL,
         n_layers=N_LAYERS,
@@ -61,6 +61,8 @@ model = DecoderOnlyTransformer(
 ).to(DEVICE)
 
 print(model)
+n_params = sum(p.numel() for p in model.parameters())
+print(f"  model params: {n_params/1e6:.2f}M")
 
 
 def train(model: DecoderOnlyTransformer):
@@ -80,7 +82,7 @@ def train(model: DecoderOnlyTransformer):
             labels = batch["labels"].to(DEVICE)                # [bsz, T], Q 段和 pad 段是 -100
 
             # forward
-            logits = model(input_ids) #, attention_mask)  # [bsz, L, vocab]
+            logits = model(input_ids, attention_mask)  # [bsz, L, vocab]
             
             # shift: 用位置 i 的输出预测位置 i+1 的 token
             shift_logits = logits[:, :-1, :].contiguous()
