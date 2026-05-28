@@ -110,7 +110,7 @@ class Transformer(TransformerBase):
             enc_outputs = self.encoder(prompt, src_mask=src_mask)  # [1, len_prompt, d_model]
 
             # ========== 2. Decoder ==========
-            ys = torch.full((1, 1), self.decoder.config.sos_idx, dtype=torch.long, device=self.device)
+            ys = torch.full((1, 1), self.decoder.config.bos_idx, dtype=torch.long, device=self.device)
 
             while True:
                 logits = self.linear(self.decoder(ys, enc_outputs, src_mask=src_mask))  # [1, t, trg_vocab_size]
