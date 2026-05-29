@@ -26,6 +26,7 @@ additional_special_tokens 额外自定义用户/模型自定义的特殊 token
 """
 
 tokenizer = AutoTokenizer.from_pretrained("gpt2")
+tokenizer.padding_side = "right"
 tokenizer.add_special_tokens({
     "bos_token": "[BOS]",
     "eos_token": "[EOS]",

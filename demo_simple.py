@@ -35,7 +35,7 @@ model = Transformer(
     ),
     dec_config=ModuleConfig(
         pad_idx=tgt_vocab['P'],
-        sos_idx=tgt_vocab['S'],
+        bos_idx=tgt_vocab['S'],
         eos_idx=tgt_vocab['E']
     )
 ).to(device)
