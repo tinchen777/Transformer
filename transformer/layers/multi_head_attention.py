@@ -14,6 +14,8 @@ from ..exceptions import (
 if TYPE_CHECKING:
     Tensor = torch.Tensor
 
+MIN_FLOAT = torch.finfo(torch.float).min
+
 
 class ScaledDotProductAttention(nn.Module):
     """
@@ -58,12 +60,12 @@ class ScaledDotProductAttention(nn.Module):
             d_qk = K.size(-1)
 
             # 1. dot product Query with Key^T to compute similarity scores
-            scores = torch.matmul(Q, K.transpose(-1, -2)) / np.sqrt(d_qk)
+            scores = torch.matmul(Q, K.transpose(-1, -2)) * (d_qk ** -0.5)
             # scores : [bsz, n_heads, len_q, len_kv]
 
             # 2. apply masking
             # Fills elements of self tensor with value where mask is True.
-            scores.masked_fill_(attn_mask, float("-inf"))
+            scores.masked_fill_(~attn_mask, MIN_FLOAT)
 
             # 3. pass them softmax to make [0, 1] range
             attn = self.softmax(scores)

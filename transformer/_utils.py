@@ -22,17 +22,16 @@ class ModuleConfig:
     d_model: int = 512
     d_qk: int = 64
     d_v: int = 64
+    d_ff: int = 2048
     n_layers: int = 6
     n_heads: int = 8
-    max_len: int = 5000
-    d_ff: int = 2048
     drop_prob: float = 0.1
-    use_prefix_attention: bool = True  # for prefix LM, whether to use prefix attention (bidirectional) in the prefix part
+    max_len: int = 5000
 
 
-def make_pad_mask(seq: Tensor, pad_idx: int = 0) -> Tensor:
+def make_padding_mask(seq: Tensor, pad_idx: int = 0) -> Tensor:
     """
-    Make padding mask for encoder and decoder, where `True` indicates the position of the padding token.
+    Make padding mask for encoder and decoder, where `True` indicates the position of the real token (not padding).
 
     Parameters
     ----------
@@ -47,20 +46,17 @@ def make_pad_mask(seq: Tensor, pad_idx: int = 0) -> Tensor:
         Tensor
             The padding mask, shape as `[bsz, 1, 1, len_seq]`.
     """
-    return (seq == pad_idx).unsqueeze(1).unsqueeze(2)
+    return (seq != pad_idx).unsqueeze(1).unsqueeze(2)
 
-# BUG 对于每个sample都不同，不能直接在外面做成一个固定的 mask
-def make_causal_mask(seq: Tensor, prefix_len: int = 0) -> Tensor:
+
+def make_causal_mask(seq: Tensor) -> Tensor:
     """
-    Make causal mask for decoder, where `True` indicates the position that should be masked (i.e., not visible to the current token).
+    Make causal mask for decoder, where `True` indicates the position that should be visible to the current token (including itself and all previous tokens).
 
     Parameters
     ----------
         seq : Tensor
             The sequence tensor, shape as `[bsz, len_seq]`.
-
-        prefix_len : int, default `0`
-            The length of the prefix (e.g., question part in a Q&A pair) that should be fully visible to itself (bidirectional attention), while the rest of the sequence is masked with causal (unidirectional) attention.
 
     Returns
     -------
@@ -69,44 +65,9 @@ def make_causal_mask(seq: Tensor, prefix_len: int = 0) -> Tensor:
     """
     len_seq = seq.size(1)
 
-    mask = torch.triu(
-        torch.ones(len_seq, len_seq, device=seq.device, dtype=torch.bool),
-        diagonal=1
+    return torch.tril(
+        torch.ones(len_seq, len_seq, device=seq.device, dtype=torch.bool)
     )
-    if prefix_len > 1:
-        mask[:prefix_len, :prefix_len] = False  # Q 内部的上三角也设为 False (双向)
-
-    return mask
-
-
-def make_merged_mask(seq: Tensor, pad_idx: int = 0, prefix_len: int = 0) -> Tensor:
-    """
-    Make merged mask for decoder, where `True` indicates the position that should be masked (i.e., not visible to the current token). This is a combination of padding mask and causal mask.
-
-    Parameters
-    ----------
-        seq : Tensor
-            The sequence tensor, shape as `[bsz, len_seq]`.
-
-        pad_idx : int, default `0`
-            The index of the padding token.
-
-        prefix_len : int, default `0`
-            The length of the prefix (e.g., question part in a Q&A pair) that should be fully visible to itself (bidirectional attention), while the rest of the sequence is masked with causal (unidirectional) attention.
-
-    Returns
-    -------
-        Tensor
-            The merged mask, shape as `[bsz, 1, len_seq, len_seq]`.
-    """
-    causal_mask = make_causal_mask(seq, prefix_len)
-    # causal_mask: [len_seq, len_seq]
-    pad_mask = make_pad_mask(seq, pad_idx)
-    # pad_mask: [bsz, 1, 1, len_seq]
-    mask = pad_mask | causal_mask
-    # mask: [bsz, 1, len_seq, len_seq]
-
-    return mask
 
 
 def select_next_token(

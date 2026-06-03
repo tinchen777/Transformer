@@ -3,7 +3,7 @@ from datasets import load_dataset
 from transformers import AutoTokenizer, DataCollatorForSeq2Seq
 
 
-MAX_LEN    = 128
+MAX_LEN    = 5000
 
 # ============================================================
 # 1. 加载数据集
