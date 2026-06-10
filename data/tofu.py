@@ -1,7 +1,10 @@
 
 from datasets import load_dataset
 from transformers import AutoTokenizer, DataCollatorForSeq2Seq
+import scopos
 
+
+scopos.update(stage="read data", epoch=scopos.progress(label="loading data"), loss="N/A")
 
 MAX_LEN    = 5000
 

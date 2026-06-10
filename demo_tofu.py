@@ -8,6 +8,7 @@ from datetime import datetime
 import csv
 from tqdm import tqdm
 import yaml
+import scopos
 
 from data.tofu import *
 from transformer import DecoderOnlyTransformer, ModuleConfig
@@ -21,7 +22,7 @@ DEVICE = 'cuda:0'
 D_MODEL = 512
 N_LAYERS = 6
 N_HEADS = 8
-D_FF = 1024
+D_FF = 4096
 DROP_PROB = 0.1
 
 # Training hyperparameters
@@ -31,7 +32,7 @@ LR = 3e-4
 GRAD_CLIP = 1.0
 SAVE_EVERY = 10
 
-NAME = "D_FF_1024"
+NAME = "D_FF_4096"
 TAG = datetime.now().strftime("%Y%m%d_%H%M%S")
 SAVE_FOLDER = f"save/TOFU/{TAG}{NAME}"
 os.makedirs(SAVE_FOLDER, exist_ok=True)
@@ -91,6 +92,8 @@ def train(model: DecoderOnlyTransformer):
 
     model.train()
 
+    scopos.update(stage="training", epoch=scopos.progress(total=EPOCHS), loss="N/A")
+
     with open(f"{SAVE_FOLDER}/result.csv", "a", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
         writer.writerow(["Epoch", "Iter", "Loss"])
@@ -134,6 +137,9 @@ def train(model: DecoderOnlyTransformer):
 
                 # logits = model(dec_inputs, dec_attention_mask)  # [bsz, len_seq-1, vocab_size]
                 # loss = criterion(logits.view(-1, VOCAB_SIZE), dec_outputs.view(-1))
+
+            scopos.update(stage="training", epoch=scopos.progress(value=epoch, total=EPOCHS), loss=loss_str)
+
             # save model checkpoint
             if epoch % SAVE_EVERY == 0:
                 checkpoint_folder = f"{SAVE_FOLDER}/checkpoints"
