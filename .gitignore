@@ -226,3 +226,6 @@ test*.py
 .vscode/
 
 save/
+
+# llm_pipeline 的训练产物（checkpoint / LoRA adapter）
+outputs/
